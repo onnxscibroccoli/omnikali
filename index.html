@@ -66,7 +66,7 @@
         <dl>
           <dt>service</dt><dd>omnikali</dd>
           <dt>record</dt><dd>endpoint.json v2</dd>
-          <dt>transport</dt><dd>RFB over WebSocket</dd>
+          <dt>transport</dt><dd>RFB over WebSocket</dt>
         </dl>
       </div>
       <a id="go" class="btn" href="#" aria-disabled="true">Connect</a>
@@ -99,7 +99,7 @@
           return Boolean(
             body &&
               body.service === "omnikali" &&
-              (body.status === "ready" || body.rfb === true)
+              (body.status === "ready" || body.rfb === true),
           );
         }
 
@@ -130,7 +130,7 @@
 
           let rec = { candidates: [] };
           try {
-            const res = await fetch("./endpoint.json", { cache: "no-store" });
+            const res = await fetch("./endpoint.json?ts=" + Date.now(), { cache: "no-store" });
             if (res.ok) rec = await res.json();
           } catch (err) {
             rec = { candidates: [] };
@@ -144,9 +144,12 @@
             if (n && bases.indexOf(n) < 0) bases.push(n);
           });
 
-          const hits = await Promise.all(bases.map(probeOne));
-          if (gen !== generation) return;
-          const hit = hits.find(Boolean);
+          let hit = null;
+          for (let i = 0; i < bases.length; i++) {
+            if (gen !== generation) return;
+            hit = await probeOne(bases[i]);
+            if (hit) break;
+          }
 
           if (hit) {
             setState("READY", "live", (hit.body.guest || "Workstation reachable.") + " Health passed.");
@@ -162,7 +165,7 @@
           setState("UNAVAILABLE", "danger", rec.note || "No live gateway. Pages cannot resurrect a dead sandbox port.");
           hold.hidden = false;
           go.textContent = "Connect";
-          retryTimer = window.setTimeout(run, 20000);
+          retryTimer = window.setTimeout(run, 8000);
         }
 
         window.addEventListener("pageshow", function () {
