@@ -17,6 +17,6 @@
   ],
   "dns": null,
   "omnikaliLink": "retired",
-  "updatedAt": "2026-09-21T23:45:44.716Z",
+  "updatedAt": "2026-09-21T23:45:56.413Z",
   "note": "No live public gateway. Pages must show temporarily unavailable. Do not show a stale health-passed note. Do not redirect to a missing sandbox port."
 }
