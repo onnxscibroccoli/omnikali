@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>OmniKali</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #090b10;
+        --surface: #12151c;
+        --fg: #e8edf4;
+        --muted: #8b95a5;
+        --accent: #2f9ae5;
+        --live: #3ecf8e;
+        --danger: #e25c5c;
+        --warn: #d6a53c;
+        --border: #262c38;
+        --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+      body { display: grid; place-items: center; padding: 2.5rem 1rem; }
+      main { width: min(28rem, 100%); }
+      .kicker { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.75rem; }
+      h1 { font-size: 1.85rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 0.75rem; }
+      p { color: var(--muted); font-size: 0.925rem; line-height: 1.55; margin: 0 0 1rem; }
+      .card { border: 1px solid var(--border); background: var(--surface); border-radius: 0.5rem; padding: 1rem 1.1rem; margin: 1.25rem 0; }
+      .state { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 0.5rem; }
+      .warn { color: var(--warn); }
+      .live { color: var(--live); }
+      .danger { color: var(--danger); }
+      dl { display: grid; grid-template-columns: auto 1fr; gap: 0.2rem 1rem; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin: 0.75rem 0 0; }
+      a.btn {
+        display: flex; align-items: center; justify-content: center; height: 3rem;
+        border-radius: 0.5rem; background: var(--accent); color: var(--bg);
+        text-decoration: none; font-weight: 500; font-size: 0.925rem;
+      }
+      a.btn[aria-disabled="true"] { pointer-events: none; opacity: 0.4; }
+      .dead {
+        border: 1px solid var(--border); background: var(--surface); border-radius: 0.5rem;
+        padding: 0.9rem 1rem; font-size: 0.9rem; color: var(--muted); line-height: 1.5;
+      }
+      nav { margin-top: 1.5rem; font-family: var(--mono); font-size: 0.7rem; }
+      nav a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker">Track B</p>
+      <h1>OmniKali</h1>
+      <p>
+        Permanent door for the Kali workstation. This page is not the VM and not a
+        screenshot shell. It reads a service record, probes health, and only then
+        forwards you to the authenticated gateway.
+      </p>
+      <div class="card">
+        <p id="state" class="state warn">PROBING</p>
+        <p id="detail">Looking up the current workstation endpoint…</p>
+        <dl>
+          <dt>service</dt><dd>omnikali</dd>
+          <dt>record</dt><dd>endpoint.json v2</dd>
+          <dt>transport</dt><dd>RFB over WebSocket</dd>
+        </dl>
+      </div>
+      <a id="go" class="btn" href="#" aria-disabled="true">Connect</a>
+      <p id="hold" class="dead" hidden>
+        OmniKali workstation temporarily unavailable. The lab node may still be
+        running. This door will not send you to a missing sandbox port.
+      </p>
+      <nav><a href="./security.html">RFB security extensions</a></nav>
+    </main>
+    <script>
+      (function () {
+        const stateEl = document.getElementById("state");
+        const detailEl = document.getElementById("detail");
+        const go = document.getElementById("go");
+        const hold = document.getElementById("hold");
+        let generation = 0;
+        let retryTimer = 0;
+
+        function setState(label, cls, detail) {
+          stateEl.textContent = label;
+          stateEl.className = "state " + cls;
+          detailEl.textContent = detail;
+        }
+
+        function healthUrl(base) {
+          return String(base).replace(/\/$/, "") + "/api/public/health";
+        }
+
+        function isLive(body) {
+          return Boolean(
+            body &&
+              body.service === "omnikali" &&
+              (body.status === "ready" || body.rfb === true)
+          );
+        }
+
+        async function probeOne(base) {
+          const origin = String(base).replace(/\/$/, "");
+          if (!/^https?:\/\//i.test(origin)) return null;
+          const ctrl = new AbortController();
+          const timer = setTimeout(function () { ctrl.abort(); }, 4000);
+          try {
+            const res = await fetch(healthUrl(origin), { signal: ctrl.signal, mode: "cors", cache: "no-store" });
+            if (!res.ok) return null;
+            const body = await res.json();
+            if (!isLive(body)) return null;
+            return { endpoint: origin, body: body };
+          } catch (err) {
+            return null;
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+
+        async function run() {
+          const gen = ++generation;
+          setState("PROBING", "warn", "Looking up the current workstation endpoint…");
+          go.setAttribute("aria-disabled", "true");
+          go.href = "#";
+          hold.hidden = true;
+
+          let rec = { candidates: [] };
+          try {
+            const res = await fetch("./endpoint.json", { cache: "no-store" });
+            if (res.ok) rec = await res.json();
+          } catch (err) {
+            rec = { candidates: [] };
+          }
+          if (gen !== generation) return;
+
+          const bases = [];
+          if (rec.endpoint) bases.push(String(rec.endpoint).replace(/\/$/, ""));
+          (rec.candidates || []).forEach(function (c) {
+            const n = String(c || "").replace(/\/$/, "");
+            if (n && bases.indexOf(n) < 0) bases.push(n);
+          });
+
+          const hits = await Promise.all(bases.map(probeOne));
+          if (gen !== generation) return;
+          const hit = hits.find(Boolean);
+
+          if (hit) {
+            setState("READY", "live", (hit.body.guest || "Workstation reachable.") + " Health passed.");
+            go.href = hit.endpoint + "/";
+            go.removeAttribute("aria-disabled");
+            go.textContent = "Connect to " + (hit.body.workstationId || "OmniKali");
+            window.setTimeout(function () {
+              if (gen === generation) window.location.assign(hit.endpoint + "/");
+            }, 1200);
+            return;
+          }
+
+          setState("UNAVAILABLE", "danger", rec.note || "No live gateway. Pages cannot resurrect a dead sandbox port.");
+          hold.hidden = false;
+          go.textContent = "Connect";
+          retryTimer = window.setTimeout(run, 20000);
+        }
+
+        window.addEventListener("pageshow", function () {
+          window.clearTimeout(retryTimer);
+          run();
+        });
+        run();
+      })();
+    </script>
+  </body>
+</html>

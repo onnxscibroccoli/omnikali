@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>OmniKali · RFB security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #090b10; --surface: #12151c; --fg: #e8edf4; --muted: #8b95a5;
+        --accent: #2f9ae5; --border: #262c38;
+        --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+      body { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+      .kicker { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
+      h1 { font-size: 1.7rem; letter-spacing: -0.03em; }
+      h2 { font-size: 1.05rem; margin-top: 2rem; }
+      p, li { color: var(--muted); line-height: 1.55; font-size: 0.95rem; }
+      a { color: var(--accent); }
+      table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.75rem; }
+      th, td { text-align: left; border-bottom: 1px solid var(--border); padding: 0.45rem 0.3rem; }
+      th { color: var(--muted); font-weight: 500; }
+      code { font-family: var(--mono); font-size: 0.8em; }
+    </style>
+  </head>
+  <body>
+    <p class="kicker">Track B · protocol</p>
+    <h1>RFB security extensions</h1>
+    <p>
+      RFC 6143 gives RFB almost no confidentiality. VncAuth is a DES
+      challenge, not a tunnel. OmniKali therefore authenticates at the
+      gateway and keeps TigerVNC on loopback.
+    </p>
+    <h2>What we run</h2>
+    <ul>
+      <li>Google / X / email at the gateway (Better Auth).</li>
+      <li>One-shot RFB tickets on <code>/ws/rfb</code>. No ticket → 401.</li>
+      <li>Host-fwd <code>127.0.0.1:5901 → guest :5900</code>. Not on 0.0.0.0.</li>
+      <li>Guest <code>SecurityTypes None</code> only behind that pipe, so noVNC does not prompt for a VNC password and status probes do not blacklist SLIRP.</li>
+    </ul>
+    <h2>IANA / rfbproto types</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>On guest</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>None</td><td>yes</td><td>Only because the WS is already authorized.</td></tr>
+        <tr><td>2</td><td>VncAuth</td><td>no</td><td>Weak DES. Next hop if the proxy terminates it.</td></tr>
+        <tr><td>5</td><td>RA2</td><td>no</td><td>RSA-AES. noVNC support incomplete.</td></tr>
+        <tr><td>6</td><td>RA2ne</td><td>no</td><td>Handshake encrypted, session cleartext.</td></tr>
+        <tr><td>16</td><td>Tight</td><td>no</td><td>TightVNC wrapper / encodings.</td></tr>
+        <tr><td>18</td><td>TLS</td><td>no</td><td>Anonymous TLS.</td></tr>
+        <tr><td>19</td><td>VeNCrypt</td><td>no</td><td>TLS/X509 subtypes. Right loopback upgrade.</td></tr>
+        <tr><td>20</td><td>SASL</td><td>no</td><td>Redundant with gateway identity.</td></tr>
+      </tbody>
+    </table>
+    <h2>VeNCrypt subtypes (not enabled)</h2>
+    <p>
+      TLSNone (257), TLSVnc (258), X509None (260), X509Vnc (261). These would
+      encrypt gateway↔guest on localhost. They do not publish a Grok sandbox
+      port, and they are not GitHub Pages.
+    </p>
+    <h2>What this is not</h2>
+    <ul>
+      <li>Not JPEG <code>/api/desktop</code>.</li>
+      <li>Not <code>omnikali-link</code> Quick Tunnel.</li>
+      <li>Not a Dynamic DNS zone — <code>endpoint.json</code> is the pointer until a real name exists.</li>
+    </ul>
+    <p><a href="./">← OmniKali door</a></p>
+  </body>
+</html>
