@@ -7,10 +7,7 @@
   "health": "https://mail-northeast-ent-promptly.trycloudflare.com/api/public/health",
   "candidates": [
     "https://mail-northeast-ent-promptly.trycloudflare.com",
-    "https://hds-cyhihmbaznzw-6014.grok-code-wild.hades-www.grok-sandbox.com",
-    "https://mall-roughly-smtp-transportation.trycloudflare.com",
-    "https://hds-z1zyzh92kph1-6014.grok-code-wild.hades-www.grok-sandbox.com",
-    "https://hds-e8ly4ggbj0xk-6014.grok-code-wild.hades-www.grok-sandbox.com"
+    "https://mall-roughly-smtp-transportation.trycloudflare.com"
   ],
   "transport": "rfb-over-websocket",
   "auth": [
@@ -20,6 +17,6 @@
   ],
   "dns": null,
   "omnikaliLink": "retired",
-  "updatedAt": "2026-09-21T23:18:21.857Z",
-  "note": "Public health passed. Pages may redirect here. GitHub Pages is the stable name; this origin is the current gateway."
+  "updatedAt": "2026-09-21T23:19:09.287Z",
+  "note": "Public health passed. Pages may offer Continue session or Create workstation here."
 }
