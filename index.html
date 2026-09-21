@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>OmniKali</title>
+    <title>OmniKali — start a Linux workstation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -29,7 +29,8 @@
       body { display: grid; place-items: center; padding: 2.5rem 1rem; }
       main { width: min(28rem, 100%); }
       .kicker { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin: 0 0 0.75rem; }
-      h1 { font-size: 1.85rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 0.75rem; }
+      h1 { font-size: 1.85rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 0.35rem; }
+      .lede { color: var(--fg); font-size: 1.05rem; margin: 0 0 0.75rem; }
       p { color: var(--muted); font-size: 0.925rem; line-height: 1.55; margin: 0 0 1rem; }
       .card { border: 1px solid var(--border); background: var(--surface); border-radius: 0.5rem; padding: 1rem 1.1rem; margin: 1.25rem 0; }
       .state { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; margin: 0 0 0.5rem; }
@@ -37,11 +38,13 @@
       .live { color: var(--live); }
       .danger { color: var(--danger); }
       dl { display: grid; grid-template-columns: auto 1fr; gap: 0.2rem 1rem; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin: 0.75rem 0 0; }
+      .actions { display: grid; gap: 0.6rem; }
       a.btn {
         display: flex; align-items: center; justify-content: center; height: 3rem;
         border-radius: 0.5rem; background: var(--accent); color: var(--bg);
         text-decoration: none; font-weight: 500; font-size: 0.925rem;
       }
+      a.btn.secondary { background: var(--surface); color: var(--fg); border: 1px solid var(--border); }
       a.btn[aria-disabled="true"] { pointer-events: none; opacity: 0.4; }
       .dead {
         border: 1px solid var(--border); background: var(--surface); border-radius: 0.5rem;
@@ -55,10 +58,11 @@
     <main>
       <p class="kicker">Track B</p>
       <h1>OmniKali</h1>
+      <p class="lede">Start a Linux workstation in your browser.</p>
       <p>
-        Permanent door for the Kali workstation. This page is not the VM and not a
-        screenshot shell. It reads a service record, probes health, and only then
-        forwards you to the authenticated gateway.
+        This door is not the VM. It reads a service record, probes health, then
+        lets you continue an existing session or create a new seat on the
+        persistent Kali desktop.
       </p>
       <div class="card">
         <p id="state" class="state warn">PROBING</p>
@@ -66,13 +70,17 @@
         <dl>
           <dt>service</dt><dd>omnikali</dd>
           <dt>record</dt><dd>endpoint.json v2</dd>
-          <dt>transport</dt><dd>RFB over WebSocket</dt>
+          <dt>transport</dt><dd>RFB over WebSocket</dd>
         </dl>
       </div>
-      <a id="go" class="btn" href="#" aria-disabled="true">Connect</a>
+      <div class="actions">
+        <a id="go-continue" class="btn" href="#" aria-disabled="true">Continue session</a>
+        <a id="go-create" class="btn secondary" href="#" aria-disabled="true">Create workstation</a>
+      </div>
       <p id="hold" class="dead" hidden>
-        OmniKali workstation temporarily unavailable. The lab node may still be
-        running. This door will not send you to a missing sandbox port.
+        OmniKali workstation temporarily unavailable. The published origin did
+        not answer health. This door will not send you to a missing sandbox port.
+        Retrying automatically.
       </p>
       <nav><a href="./security.html">RFB security extensions</a></nav>
     </main>
@@ -80,7 +88,8 @@
       (function () {
         const stateEl = document.getElementById("state");
         const detailEl = document.getElementById("detail");
-        const go = document.getElementById("go");
+        const goContinue = document.getElementById("go-continue");
+        const goCreate = document.getElementById("go-create");
         const hold = document.getElementById("hold");
         let generation = 0;
         let retryTimer = 0;
@@ -89,6 +98,13 @@
           stateEl.textContent = label;
           stateEl.className = "state " + cls;
           detailEl.textContent = detail;
+        }
+
+        function disable() {
+          [goContinue, goCreate].forEach(function (el) {
+            el.setAttribute("aria-disabled", "true");
+            el.href = "#";
+          });
         }
 
         function healthUrl(base) {
@@ -124,8 +140,7 @@
         async function run() {
           const gen = ++generation;
           setState("PROBING", "warn", "Looking up the current workstation endpoint…");
-          go.setAttribute("aria-disabled", "true");
-          go.href = "#";
+          disable();
           hold.hidden = true;
 
           let rec = { candidates: [] };
@@ -152,19 +167,20 @@
           }
 
           if (hit) {
-            setState("READY", "live", (hit.body.guest || "Workstation reachable.") + " Health passed.");
-            go.href = hit.endpoint + "/";
-            go.removeAttribute("aria-disabled");
-            go.textContent = "Connect to " + (hit.body.workstationId || "OmniKali");
-            window.setTimeout(function () {
-              if (gen === generation) window.location.assign(hit.endpoint + "/");
-            }, 1200);
+            setState("READY", "live", (hit.body.guest || "Workstation reachable.") + " Choose continue or create.");
+            goContinue.href = hit.endpoint + "/?intent=continue";
+            goCreate.href = hit.endpoint + "/?intent=create";
+            goContinue.removeAttribute("aria-disabled");
+            goCreate.removeAttribute("aria-disabled");
             return;
           }
 
-          setState("UNAVAILABLE", "danger", rec.note || "No live gateway. Pages cannot resurrect a dead sandbox port.");
+          setState(
+            "UNAVAILABLE",
+            "danger",
+            "The published gateway did not answer health. Retrying. Pages will not redirect to a missing port.",
+          );
           hold.hidden = false;
-          go.textContent = "Connect";
           retryTimer = window.setTimeout(run, 8000);
         }
 
