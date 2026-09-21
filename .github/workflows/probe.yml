@@ -1,0 +1,33 @@
+name: Probe OmniKali gateway
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [register-endpoint]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Probe candidates and rewrite endpoint.json
+        run: node .github/scripts/probe-endpoint.mjs
+      - name: Commit if the service record changed
+        run: |
+          git config user.name "omnikali-probe"
+          git config user.email "304189395+onnxscibroccoli@users.noreply.github.com"
+          git add endpoint.json
+          if git diff --cached --quiet; then
+            echo unchanged
+          else
+            git commit -m "chore: refresh endpoint.json from public health probe"
+            git push
+          fi

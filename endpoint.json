@@ -1,0 +1,17 @@
+{
+  "service": "omnikali",
+  "version": 2,
+  "workstationId": "ws-omnikali-lab-1",
+  "status": "unavailable",
+  "endpoint": null,
+  "health": null,
+  "candidates": [
+    "https://hds-e8ly4ggbj0xk-6014.grok-code-wild.hades-www.grok-sandbox.com"
+  ],
+  "transport": "rfb-over-websocket",
+  "auth": ["google", "x", "email"],
+  "dns": null,
+  "omnikaliLink": "retired",
+  "updatedAt": "2026-09-21T22:05:00Z",
+  "note": "GitHub Pages is the stable front door. Candidates are ephemeral Grok sandbox ports. Probe /api/public/health with CORS before any redirect. A Pages redirect cannot resurrect a dead port. External probe of the current candidate returned Cloudflare 'Port … is not found' at publish time, so endpoint stays null until an outside GET of that health URL returns 200. This file is service discovery, not JPEG transport."
+}
