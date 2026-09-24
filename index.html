@@ -108,7 +108,7 @@
         }
 
         function healthUrl(base) {
-          return String(base).replace(/\/$/, "") + "/api/public/health";
+          return String(base).replace(/\/$/, "") + "/health";
         }
 
         function isLive(body) {
@@ -167,7 +167,7 @@
           }
 
           if (hit) {
-            setState("READY", "live", (hit.body.guest || "Workstation reachable.") + " Choose continue or create.");
+            setState("READY", "live", "Gateway online. Sign in to open your persistent Kali workstation.");
             goContinue.href = hit.endpoint + "/?intent=continue";
             goCreate.href = hit.endpoint + "/?intent=create";
             goContinue.removeAttribute("aria-disabled");
