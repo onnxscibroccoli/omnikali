@@ -1,14 +1,11 @@
 {
   "service": "omnikali",
-  "version": 2,
+  "version": 3,
   "workstationId": "ws-omnikali-lab-1",
-  "status": "unavailable",
-  "endpoint": null,
-  "health": null,
-  "candidates": [
-    "https://mail-northeast-ent-promptly.trycloudflare.com",
-    "https://mall-roughly-smtp-transportation.trycloudflare.com"
-  ],
+  "status": "ready",
+  "endpoint": "https://d22bad48irrbqe.cloudfront.net",
+  "health": "https://d22bad48irrbqe.cloudfront.net/health",
+  "candidates": [],
   "transport": "rfb-over-websocket",
   "auth": [
     "google",
@@ -17,6 +14,6 @@
   ],
   "dns": null,
   "omnikaliLink": "retired",
-  "updatedAt": "2026-09-24T18:47:26.144Z",
-  "note": "No live public gateway. Pages must show temporarily unavailable. Do not redirect to a missing sandbox port."
+  "updatedAt": "2026-09-24T20:38:09Z",
+  "note": "Live gateway externally verified. Authentication is required before opening the persistent Kali desktop."
 }
