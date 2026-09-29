@@ -71,3 +71,10 @@ An AI working on the public door should:
 For architecture changes, inspect `kali-node`, Helix, Grasshopper, and grasshopper-kubernetes before modifying this edge layer.
 
 **Bottom line:** OmniKali's stable public name and health-aware discovery layer, not the desktop implementation.
+
+
+## Cross-Repository Knowledge Graph
+
+**GRAPH TAG: `OMNIKALI-KG-2026-09-28`**
+
+Future AI agents MUST read [`.omnikali/project-knowledge-graph.md`](.omnikali/project-knowledge-graph.md) before cross-repository architectural changes. Verify capability with tests and live evidence, preserve restore points, make atomic changes, and update the graph after material architecture or failure knowledge changes.
