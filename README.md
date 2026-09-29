@@ -1,26 +1,73 @@
-# OmniKali public door
+# OmniKali Public Door
 
-Static GitHub Pages front door for OmniKali Track B.
+**Status:** Active stable public discovery/entry layer  
+**Repository:** `onnxscibroccoli/omnikali`  
+**Documentation snapshot:** 2026-09-28 23:12 EDT
 
-- Permanent URL: [https://onnxscibroccoli.github.io/omnikali/](https://onnxscibroccoli.github.io/omnikali/)
-- Source repo: [onnxscibroccoli/omnikali](https://github.com/onnxscibroccoli/omnikali)
-- Workstation source: [onnxscibroccoli/kali-node](https://github.com/onnxscibroccoli/kali-node)
-- Service record: [`endpoint.json`](./endpoint.json) (discovery, not JPEG transport)
-- Ingress: [`../INGRESS.md`](../INGRESS.md)
+This repository is the stable GitHub Pages front door for OmniKali Track B. It is intentionally separate from the Kali workstation and from the older `omnikali-link` Vercel pointer.
 
-This folder/repo is **not** the Kali VM and **not** `omnikali-link`.
+## What it does
 
-The door reads `endpoint.json?ts=<now>` (GitHub Pages otherwise caches the
-pointer for ~10 minutes), CORS-probes `{base}/api/public/health` **in order**
-(published endpoint first, candidates only as failover), and redirects only
-when `status === "ready"` or `rfb === true`. QEMU-up-without-RFB and `booting`
-are not a connect target. If health fails, the page shows **OmniKali
-workstation temporarily unavailable** and retries. It will not send you to
-Cloudflare `Port hds-… is not found`.
+The page reads `endpoint.json`, adds a cache-busting timestamp, and health-probes candidate origins. It only presents a connect target when the published endpoint reports the expected health/readiness condition.
 
-`endpoint` stays `null` until an **external** probe of a candidate returns
-health 200. Local loopback being healthy is not enough to publish a URL.
+This prevents a stale or dead tunnel hostname from becoming a misleading “working” desktop link.
 
-GitHub Pages is the stable name. The value in `endpoint` is the current
-gateway (a Quick Tunnel origin until a named tunnel / owned domain exists).
-`dns` stays `null` until that named hostname exists.
+The repository therefore implements **service discovery and safe public routing**, not the workstation itself.
+
+## Contents
+
+Approximately 20 tracked files are present.
+
+Important files:
+
+- `index.html` — public door.
+- `endpoint.json` — current externally verified endpoint record.
+- `security.html` — security information.
+- `404.html` — failure page.
+- `.github/workflows/pages.yml` — publication workflow.
+- `.github/workflows/probe.yml` — endpoint probing.
+- `.github/scripts/probe-endpoint.mjs` — probe logic.
+- `.github/agents/` — agent contracts for connection, ingress, KVM, orchestration, pages, recovery, supervisor, and related operations.
+- `docs/` — dated architecture verification and Gemini-connected-app restoration material.
+
+## Development cycle
+
+**ACTIVE PRODUCTION-EDGE COMPONENT / FAIL-CLOSED DISCOVERY.**
+
+Recent commits refresh `endpoint.json` from external health probes and record dated AWS architecture verification.
+
+The critical rule is:
+
+> A healthy local loopback service is not enough to publish an external endpoint.
+
+The public endpoint should be published only after an external probe establishes health.
+
+## How to use it
+
+For a user, visit the GitHub Pages path documented by the repository.
+
+For an operator, inspect:
+
+```text
+endpoint.json
+.github/scripts/probe-endpoint.mjs
+.github/workflows/probe.yml
+docs/
+```
+
+Do not manually replace a live endpoint with an arbitrary tunnel URL.
+
+## AI model instructions
+
+An AI working on the public door should:
+
+1. inspect the current endpoint record;
+2. externally verify the target health;
+3. distinguish “QEMU is running” from “RFB is usable”;
+4. distinguish “gateway is reachable” from “authenticated desktop is usable”;
+5. fail closed when health is absent;
+6. never resurrect an obsolete Cloudflare/tunnel URL simply because it appeared in history.
+
+For architecture changes, inspect `kali-node`, Helix, Grasshopper, and grasshopper-kubernetes before modifying this edge layer.
+
+**Bottom line:** OmniKali's stable public name and health-aware discovery layer, not the desktop implementation.
