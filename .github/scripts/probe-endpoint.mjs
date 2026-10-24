@@ -55,4 +55,11 @@ const next = {
     ? "Public health passed. Pages may redirect here."
     : "No live public gateway. Pages must show temporarily unavailable. Do not redirect to a missing sandbox port.",
 };
+const same = ["service", "version", "status", "endpoint", "health", "omnikaliLink", "dns", "note", "candidates"]
+  .every((key) => JSON.stringify(next[key] ?? null) === JSON.stringify(rec[key] ?? null));
+if (same) {
+  console.log("endpoint record unchanged; not rewriting updatedAt");
+  process.exit(0);
+}
 writeFileSync("endpoint.json", `${JSON.stringify(next, null, 2)}\n`);
+
