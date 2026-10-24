@@ -57,6 +57,10 @@ docs/
 
 Do not manually replace a live endpoint with an arbitrary tunnel URL.
 
+## Physical Android automation
+
+Use the [canonical physical launcher policy](docs/PHYSICAL_ANDROID_TRANSPORT.md): broccoli-core `lib/rish_run.sh`, with `bin/broccoli-rish` delegating to it. Raw Rish remains an internal driver. Remote Android transports remain configurable and require separate acceptance evidence. This policy does not alter public endpoint discovery.
+
 ## AI model instructions
 
 An AI working on the public door should:
@@ -77,4 +81,4 @@ For architecture changes, inspect `kali-node`, Helix, Grasshopper, and grasshopp
 
 **GRAPH TAG: `OMNIKALI-KG-2026-09-28`**
 
-Future AI agents MUST read [`.omnikali/project-knowledge-graph.md`](.omnikali/project-knowledge-graph.md) before cross-repository architectural changes. Verify capability with tests and live evidence, preserve restore points, make atomic changes, and update the graph after material architecture or failure knowledge changes.
+Future AI agents MUST read [`.omnikali/PROJECT_KNOWLEDGE_GRAPH.md`](.omnikali/PROJECT_KNOWLEDGE_GRAPH.md) before cross-repository architectural changes. Verify capability with tests and live evidence, preserve restore points, make atomic changes, and update the graph after material architecture or failure knowledge changes.

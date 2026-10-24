@@ -363,3 +363,8 @@ If a repository contains this marker, the agent MUST:
 
 ---
 **Maintenance note:** This snapshot reflects the repository investigation performed on 2026-09-28. It is deliberately timestamped. Future agents must append/update evidence rather than silently rewriting history.
+
+
+## Physical launcher retirement — 2026-10-07
+
+Physical Android automation consumes broccoli-core `lib/rish_run.sh`; `bin/broccoli-rish` delegates to it. Direct/raw Rish launch instructions are retired as public entry points. The underlying Shizuku driver remains internal. Remote Android transports are explicitly configurable; physical evidence never promotes OCI R2 acceptance. See [current launcher policy](../docs/PHYSICAL_ANDROID_TRANSPORT.md). No endpoint, guest, phone, or production deployment was changed by this documentation update.
