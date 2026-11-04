@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "hostnames": [],
+  "rationale": "No public gateway hostname has been authorized in this source snapshot. Adding one is a separate owner-governed configuration change, not an inference from an untrusted endpoint record."
+}

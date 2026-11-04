@@ -16,14 +16,22 @@ concurrency:
 
 jobs:
   probe:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "22"
-      - name: Probe candidates and rewrite endpoint.json
+      - name: Verify discovery policy before network access
+        run: node --test scripts/*.test.mjs
+      - name: Probe approved candidates and stage validated endpoint.json
         run: node .github/scripts/probe-endpoint.mjs
+      - name: Reject unapproved endpoint updates
+        run: node scripts/validate-endpoint-record.mjs
       - name: Commit if the service record changed
         run: |
           set -euo pipefail

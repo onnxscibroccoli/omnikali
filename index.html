@@ -65,7 +65,7 @@
         persistent Kali desktop.
       </p>
       <div class="card">
-        <p id="state" class="state warn">PROBING</p>
+        <p id="state" class="state warn" aria-live="polite">PROBING</p>
         <p id="detail">Looking up the current workstation endpoint…</p>
         <dl>
           <dt>service</dt><dd>omnikali</dd>
@@ -80,7 +80,7 @@
       <p id="hold" class="dead" hidden>
         OmniKali workstation temporarily unavailable. The published origin did
         not answer health. This door will not send you to a missing sandbox port.
-        Retrying automatically.
+        Retrying automatically. A public health check does not prove authenticated desktop access.
       </p>
       <nav><a href="./security.html">RFB security extensions</a></nav>
     </main>
@@ -93,102 +93,118 @@
         const hold = document.getElementById("hold");
         let generation = 0;
         let retryTimer = 0;
+        const evidenceTtlMs = 12 * 60 * 60 * 1000;
+        const maxBytes = 32768;
 
         function setState(label, cls, detail) {
           stateEl.textContent = label;
           stateEl.className = "state " + cls;
           detailEl.textContent = detail;
         }
-
         function disable() {
           [goContinue, goCreate].forEach(function (el) {
             el.setAttribute("aria-disabled", "true");
             el.href = "#";
           });
         }
-
-        function healthUrl(base) {
-          return String(base).replace(/\/$/, "") + "/health";
-        }
-
-        function isLive(body) {
-          return Boolean(
-            body &&
-              body.service === "omnikali" &&
-              (body.status === "ready" || body.rfb === true),
-          );
-        }
-
-        async function probeOne(base) {
-          const origin = String(base).replace(/\/$/, "");
-          if (!/^https?:\/\//i.test(origin)) return null;
-          const ctrl = new AbortController();
-          const timer = setTimeout(function () { ctrl.abort(); }, 4000);
+        async function loadJson(url, timeoutMs) {
+          const controller = new AbortController();
+          const timer = setTimeout(function () { controller.abort(); }, timeoutMs);
           try {
-            const res = await fetch(healthUrl(origin), { signal: ctrl.signal, mode: "cors", cache: "no-store" });
-            if (!res.ok) return null;
-            const body = await res.json();
-            if (!isLive(body)) return null;
-            return { endpoint: origin, body: body };
-          } catch (err) {
-            return null;
+            const res = await fetch(url, {
+              signal: controller.signal, mode: "cors", cache: "no-store",
+              redirect: "error", headers: { accept: "application/json" }
+            });
+            if (!res.ok) throw new Error("request failed");
+            const length = Number(res.headers.get("content-length"));
+            if (length > maxBytes) throw new Error("response too large");
+            const reader = res.body && res.body.getReader();
+            if (!reader) throw new Error("streaming response unavailable");
+            let bytes = 0;
+            const chunks = [];
+            for (;;) {
+              const chunk = await reader.read();
+              if (chunk.done) break;
+              bytes += chunk.value.byteLength;
+              if (bytes > maxBytes) {
+                await reader.cancel();
+                throw new Error("response body exceeded limit");
+              }
+              chunks.push(chunk.value);
+            }
+            const buf = new Uint8Array(bytes);
+            let offset = 0;
+            chunks.forEach(function (chunk) { buf.set(chunk, offset); offset += chunk.byteLength; });
+            return JSON.parse(new TextDecoder().decode(buf));
           } finally {
             clearTimeout(timer);
           }
         }
-
+        function authorizedOrigin(record, config) {
+          if (!record || record.service !== "omnikali" ||
+              record.version !== 3 || record.status !== "available" ||
+              !config || config.schemaVersion !== 1 ||
+              !Array.isArray(config.hostnames) ||
+              !record.verification || record.verification.kind !== "PUBLIC_HEALTH_ONLY" ||
+              record.verification.result !== "PASS") return null;
+          const checked = Date.parse(record.verification.checkedAt);
+          if (!Number.isFinite(checked) || checked > Date.now() + 60000 ||
+              Date.now() - checked > evidenceTtlMs) return null;
+          if (typeof record.endpoint !== "string") return null;
+          let u;
+          try { u = new URL(record.endpoint); } catch { return null; }
+          if (u.protocol !== "https:" || u.username || u.password ||
+              u.port && u.port !== "443" || u.pathname !== "/" ||
+              u.search || u.hash || u.origin !== record.endpoint ||
+              config.hostnames.indexOf(u.hostname) < 0 ||
+              record.health !== u.origin + "/api/public/health") return null;
+          return u.origin;
+        }
+        function healthIsReachable(body) {
+          return Boolean(body && body.service === "omnikali" &&
+            (body.status === "ready" || body.rfb === true));
+        }
+        async function probeOne(origin) {
+          try {
+            const body = await loadJson(origin + "/api/public/health", 4000);
+            return healthIsReachable(body);
+          } catch (_) { return false; }
+        }
         async function run() {
           const gen = ++generation;
-          setState("PROBING", "warn", "Looking up the current workstation endpoint…");
+          setState("PROBING", "warn", "Validating the published gateway identity and current health…");
           disable();
           hold.hidden = true;
-
-          let rec = { candidates: [] };
+          let origin = null;
           try {
-            const res = await fetch("./endpoint.json?ts=" + Date.now(), { cache: "no-store" });
-            if (res.ok) rec = await res.json();
-          } catch (err) {
-            rec = { candidates: [] };
-          }
+            const values = await Promise.all([
+              loadJson("./endpoint.json?ts=" + Date.now(), 4000),
+              loadJson("./config/approved-endpoint-hosts.json?ts=" + Date.now(), 4000)
+            ]);
+            origin = authorizedOrigin(values[0], values[1]);
+          } catch (_) { origin = null; }
           if (gen !== generation) return;
 
-          const bases = [];
-          if (rec.endpoint) bases.push(String(rec.endpoint).replace(/\/$/, ""));
-          (rec.candidates || []).forEach(function (c) {
-            const n = String(c || "").replace(/\/$/, "");
-            if (n && bases.indexOf(n) < 0) bases.push(n);
-          });
-
-          let hit = null;
-          for (let i = 0; i < bases.length; i++) {
+          if (origin && await probeOne(origin)) {
             if (gen !== generation) return;
-            hit = await probeOne(bases[i]);
-            if (hit) break;
-          }
-
-          if (hit) {
-            setState("READY", "live", "Gateway online. Sign in to open your persistent Kali workstation.");
-            goContinue.href = hit.endpoint + "/?intent=continue";
-            goCreate.href = hit.endpoint + "/?intent=create";
+            setState("GATEWAY ONLINE", "live",
+              "Public gateway health passed. Sign-in and guest desktop readiness are separate checks.");
+            goContinue.href = origin + "/?intent=continue";
+            goCreate.href = origin + "/?intent=create";
             goContinue.removeAttribute("aria-disabled");
             goCreate.removeAttribute("aria-disabled");
             return;
           }
-
-          setState(
-            "UNAVAILABLE",
-            "danger",
-            "The published gateway did not answer health. Retrying. Pages will not redirect to a missing port.",
-          );
+          if (gen !== generation) return;
+          setState("UNAVAILABLE", "danger",
+            "No fresh, approved public gateway was verified. This page will not redirect.");
           hold.hidden = false;
           retryTimer = window.setTimeout(run, 8000);
         }
-
         window.addEventListener("pageshow", function () {
           window.clearTimeout(retryTimer);
           run();
         });
-        run();
       })();
     </script>
   </body>

@@ -21,11 +21,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Stage static door
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+      - name: Fail closed on unapproved or stale available endpoint
         run: |
-          mkdir -p _site
+          node scripts/validate-endpoint-record.mjs
+          node --test scripts/*.test.mjs
+      - name: Stage static door and approved-host registry
+        run: |
+          mkdir -p _site/config
           cp index.html 404.html security.html endpoint.json README.md _site/
+          cp config/approved-endpoint-hosts.json _site/config/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
         with:

@@ -6,6 +6,10 @@
 
 This repository is the stable GitHub Pages front door for OmniKali Track B. It is intentionally separate from the Kali workstation and from the older `omnikali-link` Vercel pointer.
 
+## Discovery security hardening (2026-11-04 proposal)
+
+The proposed [discovery validation contract](docs/architecture/discovery-verification.md) reconciles published `available/unavailable` states, validates exact approved HTTPS origins, pins public DNS addresses during bounded health checks, and refuses to publish stale or unapproved gateway evidence. The browser validates the same record before linking and distinguishes **gateway reachability** from authenticated desktop readiness. The hostname allowlist remains empty until a real gateway is authorized. This development branch does not establish a live desktop or deploy anything.
+
 ## What it does
 
 The page reads `endpoint.json`, adds a cache-busting timestamp, and health-probes candidate origins. It only presents a connect target when the published endpoint reports the expected health/readiness condition.
