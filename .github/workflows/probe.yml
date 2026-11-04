@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: probe-endpoint
+  cancel-in-progress: false
+
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -22,12 +26,19 @@ jobs:
         run: node .github/scripts/probe-endpoint.mjs
       - name: Commit if the service record changed
         run: |
+          set -euo pipefail
           git config user.name "omnikali-probe"
           git config user.email "304189395+onnxscibroccoli@users.noreply.github.com"
           git add endpoint.json
           if git diff --cached --quiet; then
             echo unchanged
-          else
-            git commit -m "chore: refresh endpoint.json from public health probe"
-            git push
+            exit 0
           fi
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git add endpoint.json
+          if git diff --cached --quiet; then
+            echo unchanged-after-rebase
+            exit 0
+          fi
+          git commit -m "chore: refresh endpoint.json from public health probe"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
