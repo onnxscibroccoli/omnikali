@@ -1,5 +1,8 @@
 # OmniKali Public Door
 
+
+> **Technical reviewers:** [Source-linked engineering evidence and ordered next steps](docs/PORTFOLIO_READINESS.md) · [tracking issue](https://github.com/onnxscibroccoli/omnikali/issues/9). These records do not certify production behavior.
+
 **Status:** Active stable public discovery/entry layer  
 **Repository:** `onnxscibroccoli/omnikali`  
 **Documentation snapshot:** 2026-09-28 23:12 EDT
